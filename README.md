@@ -1,2 +1,2 @@
 # earthsight
-![EarthSight: a tool to explore, analyze and understand earth observation data](earthsight.gif)
+![EarthSight](https://github.com/k3blu3/earthsight/blob/master/earthsight.gif)
