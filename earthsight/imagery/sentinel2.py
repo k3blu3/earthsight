@@ -73,6 +73,8 @@ class Sentinel2:
             self.img = self.ic.max()
         elif temporal_op == 'median':
             self.img = self.ic.median()
+        elif temporal_op == 'mosaic':
+            self.img = self.ic.mosaic()
 
     
     def _filter_date(self, start_datetime, end_datetime):
