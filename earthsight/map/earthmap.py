@@ -60,9 +60,8 @@ class EarthMap:
         }
         self.map.add_control(dc)
 
-        # set a better layout
-        self.map.layout.width = '960px'
-        self.map.layout.height = '540px'
+        # set a custom map layout
+        self.map.layout.height = '700px'
 
         # define imagery source
         self.s2 = Sentinel2()
@@ -92,9 +91,8 @@ class EarthMap:
 
 
     def visualize_s2(self):
-        # TODO: this is garbage-y
-        #band_viz = self.s2_bands_viz.value
-        url = self.s2.visualize('True Color')
+        band_parms = self._get_band_parms()
+        url = self.s2.visualize(band_parms)
         self._add_layer(url, 'Sentinel-2')
 
     
@@ -113,6 +111,26 @@ class EarthMap:
         self.map.add_layer(layer)
 
 
+    def _get_band_parms(self):
+        if self.single_band.value == True:
+            band = self.gray_band_selector.value
+            minval, maxval = self.gray_band_slider.value
+            band_parms = ([band], [minval], [maxval])
+        else:
+            bands = [self.single_band_selectors[0].value,
+                     self.single_band_selectors[1].value,
+                     self.single_band_selectors[2].value]
+            mins = [self.single_band_sliders[0].value[0],
+                    self.single_band_sliders[1].value[0],
+                    self.single_band_sliders[2].value[0]]
+            maxs = [self.single_band_sliders[0].value[1],
+                    self.single_band_sliders[1].value[1],
+                    self.single_band_sliders[2].value[1]]
+            band_parms = (bands, mins, maxs)
+
+        return band_parms
+
+    
     def _s2_button_click(self, event):
         if self.s2_button.button_style == 'info':
             self.s2_button.button_style = 'success'
@@ -135,9 +153,43 @@ class EarthMap:
         self.update_s2()
         self.visualize_s2()
 
-    
-    def _band_observe(self, event):
+
+    def _viz_observe(self, event):
         self.visualize_s2()
+    
+
+    def _band_presets_observe(self, event):
+        preset = self.band_presets.value
+        band_parms = self.s2.get_band_presets()[preset]
+
+        bands, mins, maxs = band_parms
+
+        for idx in range(len(bands)):
+            band, minval, maxval = bands[idx], mins[idx], maxs[idx]
+            if len(bands) == 1:
+                self.single_band.value = True
+                band_selector = self.gray_band_selector
+                band_slider = self.gray_band_slider
+            else:
+                self.single_band.value = False
+                band_selector = self.single_band_selectors[idx]
+                band_slider = self.single_band_sliders[idx]
+
+            band_selector.value = band
+            band_slider.value = [minval, maxval]
+
+
+    def _single_band_observe(self, event):
+        if self.single_band.value == True:
+            self.single_band_panes[0].layout.visibility = 'hidden'
+            self.single_band_panes[1].layout.visibility = 'hidden'
+            self.single_band_panes[2].layout.visibility = 'hidden'
+            self.gray_band_pane.layout.visibility = 'visible'
+        else:
+            self.single_band_panes[0].layout.visibility = 'visible'
+            self.single_band_panes[1].layout.visibility = 'visible'
+            self.single_band_panes[2].layout.visibility = 'visible'
+            self.gray_band_pane.layout.visibility = 'hidden'
 
 
     def _build_band_widgets(self):
@@ -156,19 +208,54 @@ class EarthMap:
             description='See in',
             disabled=False
         )
+        self.band_presets.observe(self._band_presets_observe)
+
+        self.single_band = ipywidgets.Checkbox(
+            value=False,
+            description='Single band',
+            disabled=False,
+        )
+        self.single_band.observe(self._single_band_observe)
 
         all_bands = self.s2.get_bands()
         all_band_options = [a[0] for a in all_bands]
         
+        self.gray_band_selector = ipywidgets.Dropdown(
+            options=all_band_options,
+            value='probability',
+            description='Gray',
+            disabled=False
+        )
+        self.gray_band_selector.observe(self._viz_observe)
+
+        self.gray_band_slider = ipywidgets.IntRangeSlider(
+            value=[65, 100],
+            min=0,
+            max=100,
+            step=1,
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d'
+        )
+        self.gray_band_slider.observe(self._viz_observe)
+
+        self.gray_band_pane = ipywidgets.HBox(
+            [self.gray_band_selector,
+             self.gray_band_slider]
+        )
+        
         self.single_band_selectors = list()
         self.single_band_sliders = list()
-        
+
         self.single_band_selectors.append(ipywidgets.Dropdown(
             options=all_band_options,
             value='B4',
-            description='R',
+            description='Red',
             disabled=False
         ))
+        self.single_band_selectors[0].observe(self._viz_observe)
 
         self.single_band_sliders.append(ipywidgets.IntRangeSlider(
             value=[0, 3000],
@@ -181,13 +268,15 @@ class EarthMap:
             readout=True,
             readout_format='d'
         ))
+        self.single_band_sliders[0].observe(self._viz_observe)
 
         self.single_band_selectors.append(ipywidgets.Dropdown(
             options=all_band_options,
             value='B3',
-            description='G',
+            description='Green',
             disabled=False
         ))
+        self.single_band_selectors[1].observe(self._viz_observe)
 
         self.single_band_sliders.append(ipywidgets.IntRangeSlider(
             value=[0, 3000],
@@ -200,13 +289,15 @@ class EarthMap:
             readout=True,
             readout_format='d'
         ))
+        self.single_band_sliders[1].observe(self._viz_observe)
 
         self.single_band_selectors.append(ipywidgets.Dropdown(
             options=all_band_options,
             value='B2',
-            description='B',
+            description='Blue',
             disabled=False
         ))
+        self.single_band_selectors[2].observe(self._viz_observe)
 
         self.single_band_sliders.append(ipywidgets.IntRangeSlider(
             value=[0, 3000],
@@ -219,6 +310,7 @@ class EarthMap:
             readout=True,
             readout_format='d'
         ))
+        self.single_band_sliders[2].observe(self._viz_observe)
 
         self.single_band_panes = list()
         for band_selector, band_slider in zip(self.single_band_selectors, self.single_band_sliders):
@@ -228,14 +320,26 @@ class EarthMap:
                      band_slider]
                 )
             )
+
+        self.histogram_button = ipywidgets.Button(
+            description='Histogram',
+            disabled=False,
+            button_style='warning',
+            tooltip='Compute histogram across bands over map region'
+        )
         
         self.indiv_band_buttons = ipywidgets.VBox(
             [self.band_presets,
+             self.single_band,
+             self.gray_band_pane,
              self.single_band_panes[0],
              self.single_band_panes[1],
-             self.single_band_panes[2]]
+             self.single_band_panes[2],
+             self.histogram_button]
         )
+        
         self.indiv_band_buttons.layout.display = 'none'
+        self.gray_band_pane.layout.visibility = 'hidden'
 
         band_button_control = ipyleaflet.WidgetControl(
             widget=self.band_button,

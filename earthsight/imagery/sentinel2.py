@@ -34,15 +34,24 @@ S2_BAND_PRESETS = {
     'True Color': (['B4', 'B3', 'B2'],
                    [0, 0, 0],
                    [3000, 3000, 3000]),
-    'Vegetation': (['B8', 'B4', 'B3'],
-                   [0, 0, 0],
-                   [3000, 3000, 3000]),
-    'Urban': (['B12', 'B11', 'B4'],
-              [0, 0, 0],
-              [3000, 3000, 3000]),
-    'Infrared': (['B12', 'B8A', 'B4'],
-                 [0, 0, 0],
-                 [3000, 3000, 3000])
+    'Color Infrared': (['B8', 'B4', 'B3'],
+                       [0, 0, 0],
+                       [3000, 3000, 3000]),
+    'Short-Wave Infrared': (['B12', 'B8A', 'B4'],
+                            [0, 0, 0],
+                            [7500, 3000, 3000]),
+    'Agriculture': (['B11', 'B8', 'B2'],
+                    [0, 0, 0],
+                    [3000, 3000, 3000]),
+    'Geology': (['B12', 'B11', 'B8'],
+                [0, 0, 0],
+                [3000, 3000, 3000]),
+    'Bathymetric': (['B4', 'B3', 'B1'],
+                    [0, 0, 0],
+                    [3000, 3000, 3000]),
+    'Clouds': (['probability'],
+               [0],
+               [100])
 }
 
 
@@ -64,7 +73,7 @@ class Sentinel2:
         s2 = ee.ImageCollection(self.collection_ids[0])
         s2cloud = ee.ImageCollection(self.collection_ids[1])
 
-        # join them with new cloud mask band
+        # join collections
         s2joined = ee.Join.saveFirst('cloud_mask').apply(
             primary=s2,
             secondary=s2cloud,
@@ -72,7 +81,10 @@ class Sentinel2:
                                        rightField='system:index')
         )
 
-        return ee.ImageCollection(s2joined)
+        # add probability band into the original S2 image collection
+        s2combined = ee.ImageCollection(s2joined).map(lambda img: img.addBands(img.get('cloud_mask')))
+
+        return s2combined
 
 
     def _ic_to_image(self, temporal_op):
@@ -128,11 +140,11 @@ class Sentinel2:
         self._ic_to_image(temporal_op)
 
 
-    def visualize(self, preset):
-        band_names, mins, maxs = S2_BAND_PRESETS[preset]
+    def visualize(self, band_parms):
+        bands, mins, maxs = band_parms
         vis_params = {'min': mins,
                       'max': maxs,
-                      'bands': band_names}
+                      'bands': bands}
 
         return image_to_tiles(self.img, vis_params)
 
