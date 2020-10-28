@@ -64,12 +64,15 @@ class EarthMap:
         self.map.layout.width = '960px'
         self.map.layout.height = '540px'
 
+        # define imagery source
+        self.s2 = Sentinel2()
+
         # build all widgets
         self.build_widgets()
 
-        # define S2 imagery source
-        self.s2 = Sentinel2()
+        # throw on default visualization
         self.update_s2()
+        self.visualize_s2()
 
     
     def update_s2(self):
@@ -78,7 +81,6 @@ class EarthMap:
         cloudy_pixel_pct = self.s2_cloudy_pixel.value
         cloud_mask = self.s2_cloud_mask.value
         temporal_op = self.s2_temporal_op.value
-        band_viz = self.s2_bands_viz.value
 
         self.s2.update(
             start_datetime,
@@ -88,12 +90,17 @@ class EarthMap:
             temporal_op
         )
 
-        url = self.s2.visualize(band_viz)
+
+    def visualize_s2(self):
+        # TODO: this is garbage-y
+        #band_viz = self.s2_bands_viz.value
+        url = self.s2.visualize('True Color')
         self._add_layer(url, 'Sentinel-2')
 
     
     def build_widgets(self):
         self._build_s2_widgets()
+        self._build_band_widgets()
 
 
     def show(self):
@@ -115,8 +122,133 @@ class EarthMap:
             self.s2_parms.layout.display = 'none'
 
 
+    def _band_button_click(self, event):
+        if self.band_button.button_style == 'info':
+            self.band_button.button_style = 'success'
+            self.indiv_band_buttons.layout.display = 'block'
+        else:
+            self.band_button.button_style = 'info'
+            self.indiv_band_buttons.layout.display = 'none'
+
+
     def _s2_observe(self, event):
         self.update_s2()
+        self.visualize_s2()
+
+    
+    def _band_observe(self, event):
+        self.visualize_s2()
+
+
+    def _build_band_widgets(self):
+        self.band_button = ipywidgets.Button(
+            description='Visualize',
+            disabled=False,
+            button_style='info',
+            tooltip='Configure visualization options'
+        )
+        self.band_button.on_click(self._band_button_click)
+
+        band_preset_options = self.s2.get_band_presets().keys()
+        self.band_presets = ipywidgets.Select(
+            options=band_preset_options,
+            value='True Color',
+            description='See in',
+            disabled=False
+        )
+
+        all_bands = self.s2.get_bands()
+        all_band_options = [a[0] for a in all_bands]
+        
+        self.single_band_selectors = list()
+        self.single_band_sliders = list()
+        
+        self.single_band_selectors.append(ipywidgets.Dropdown(
+            options=all_band_options,
+            value='B4',
+            description='R',
+            disabled=False
+        ))
+
+        self.single_band_sliders.append(ipywidgets.IntRangeSlider(
+            value=[0, 3000],
+            min=0,
+            max=10000,
+            step=1,
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d'
+        ))
+
+        self.single_band_selectors.append(ipywidgets.Dropdown(
+            options=all_band_options,
+            value='B3',
+            description='G',
+            disabled=False
+        ))
+
+        self.single_band_sliders.append(ipywidgets.IntRangeSlider(
+            value=[0, 3000],
+            min=0,
+            max=10000,
+            step=1,
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d'
+        ))
+
+        self.single_band_selectors.append(ipywidgets.Dropdown(
+            options=all_band_options,
+            value='B2',
+            description='B',
+            disabled=False
+        ))
+
+        self.single_band_sliders.append(ipywidgets.IntRangeSlider(
+            value=[0, 3000],
+            min=0,
+            max=10000,
+            step=1,
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='d'
+        ))
+
+        self.single_band_panes = list()
+        for band_selector, band_slider in zip(self.single_band_selectors, self.single_band_sliders):
+            self.single_band_panes.append(
+                ipywidgets.HBox(
+                    [band_selector,
+                     band_slider]
+                )
+            )
+        
+        self.indiv_band_buttons = ipywidgets.VBox(
+            [self.band_presets,
+             self.single_band_panes[0],
+             self.single_band_panes[1],
+             self.single_band_panes[2]]
+        )
+        self.indiv_band_buttons.layout.display = 'none'
+
+        band_button_control = ipyleaflet.WidgetControl(
+            widget=self.band_button,
+            position='topleft'
+        )
+
+        indiv_band_button_control = ipyleaflet.WidgetControl(
+            widget=self.indiv_band_buttons,
+            position='topleft'
+        )
+        
+        self.map.add_control(band_button_control)
+        self.map.add_control(indiv_band_button_control)
 
 
     def _build_s2_widgets(self):
@@ -172,22 +304,13 @@ class EarthMap:
         )
         self.s2_temporal_op.observe(self._s2_observe)
 
-        self.s2_bands_viz = ipywidgets.Dropdown(
-            options=['True Color', 'Vegetation', 'Urban', 'Infrared'],
-            value='True Color',
-            description='How',
-            disabled=False
-        )
-        self.s2_bands_viz.observe(self._s2_observe)
-        
         # stack parameters in a VBox
         self.s2_parms = ipywidgets.VBox(
             [self.s2_date_start,
              self.s2_date_end,
              self.s2_cloudy_pixel,
              self.s2_cloud_mask,
-             self.s2_temporal_op,
-             self.s2_bands_viz]
+             self.s2_temporal_op]
         )
 
         # default don't show unless s2 button is presseed

@@ -14,12 +14,23 @@ S2_COLLECTION_IDS = ['COPERNICUS/S2',
                      'COPERNICUS/S2_CLOUD_PROBABILITY']
 
 
-S2_BANDS = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6',
-            'B7', 'B8', 'B8A', 'B9', 'B10', 'B11', 'B12',
-            'probability'] # cloud probability
+S2_BANDS = [('B1', 0, 10000), 
+            ('B2', 0, 10000), 
+            ('B3', 0, 10000),
+            ('B4', 0, 10000),
+            ('B5', 0, 10000),
+            ('B6', 0, 10000),
+            ('B7', 0, 10000),
+            ('B8', 0, 10000),
+            ('B8A', 0, 10000),
+            ('B9', 0, 10000),
+            ('B10', 0, 10000),
+            ('B11', 0, 10000),
+            ('B12', 0, 10000),
+            ('probability', 0, 100)] # cloud probability
 
 
-S2_COLOR_PRESETS = {
+S2_BAND_PRESETS = {
     'True Color': (['B4', 'B3', 'B2'],
                    [0, 0, 0],
                    [3000, 3000, 3000]),
@@ -118,12 +129,22 @@ class Sentinel2:
 
 
     def visualize(self, preset):
-        bands, mins, maxs = S2_COLOR_PRESETS[preset]
+        band_names, mins, maxs = S2_BAND_PRESETS[preset]
         vis_params = {'min': mins,
                       'max': maxs,
-                      'bands': bands}
+                      'bands': band_names}
 
         return image_to_tiles(self.img, vis_params)
+
+
+    def get_bands(self):
+        return S2_BANDS
+
+
+    def get_band_presets(self):
+        return S2_BAND_PRESETS
+
+
         
 
 
