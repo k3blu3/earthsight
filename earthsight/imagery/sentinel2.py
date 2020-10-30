@@ -7,7 +7,8 @@ Sentinel-2 class definition that provides imagery on-demand via GEE
 
 import ee
 
-from earthsight.utils.gee import image_to_tiles
+from earthsight.utils.gee import (image_to_tiles,
+                                  bounds_to_geom)
 
 
 S2_COLLECTION_IDS = ['COPERNICUS/S2',
@@ -127,6 +128,28 @@ class Sentinel2:
         edge_mask = b9_mask.updateMask(b8a_mask)
 
         return img.updateMask(edge_mask)
+
+
+    def compute_hist(self, bounds, bands, scale):
+        roi = bounds_to_geom(bounds)
+        hist_img = self.img.select(bands)
+        hist = hist_img.reduceRegion(
+            reducer=ee.Reducer.histogram(),
+            geometry=roi,
+            scale=scale,
+            bestEffort=True
+        )
+
+        # retrive histogram as list
+        hist_bands = hist.keys().getInfo()
+        hist_list = hist.values().getInfo()
+        hist_dict = dict()
+        for band in bands:
+            band_idx = hist_bands.index(band)
+            hist_dict[band] = (hist_list[band_idx]['bucketMeans'],
+                               hist_list[band_idx]['histogram'])
+
+        return hist_dict
 
 
     def update(self, start_datetime, end_datetime, cloudy_pixel_pct, cloud_mask, temporal_op):
