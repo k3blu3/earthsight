@@ -163,15 +163,50 @@ class EarthMap:
         x_scale = bq.LinearScale()
         y_scale = bq.LinearScale()
 
-        x_axis = bq.Axis(scale=x_scale, tick_values=None, num_ticks=3)
-        y_axis = bq.Axis(scale=y_scale, tick_values=None, num_ticks=0, orientation='vertical', visible=False)
+        x_axis = bq.Axis(
+            scale=x_scale, 
+            tick_values=None, 
+            num_ticks=3
+        )
+        y_axis = bq.Axis(
+            scale=y_scale, 
+            tick_values=None, 
+            num_ticks=0, 
+            orientation='vertical', 
+            visible=False
+        )
 
-        line = bq.Lines(x=x, y=y, scales={'x': x_scale, 'y': y_scale}, colors=[color])
+        line = bq.Lines(
+            x=x, 
+            y=y, 
+            scales={
+                'x': x_scale, 
+                'y': y_scale
+            }, 
+            colors=[color],
+            selected_style={'opacity': '1'},
+            unselected_style={'opacity': '0.2'}
+        )
 
-        fig = bq.Figure(title=color, marks=[line], axes=[x_axis, y_axis],
-                        fig_margin={'top': 30, 'bottom': 30, 'left': 30, 'right': 30})
-        fig.layout.width = '200px'
-        fig.layout.height = '200px'
+        fast_sel = bq.interacts.FastIntervalSelector(
+            marks=[line], 
+            scale=x_scale
+        )
+
+        fig = bq.Figure(
+            title=color, 
+            marks=[line], 
+            axes=[x_axis, y_axis],
+            fig_margin={
+                'top': 40, 
+                'bottom': 40, 
+                'left': 40, 
+                'right': 40
+            },
+            interaction=fast_sel
+        )
+        fig.layout.width = '225px'
+        fig.layout.height = '225px'
 
         return fig
 
