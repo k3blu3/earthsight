@@ -5,6 +5,7 @@ EarthMap class definition that builds a custom ipyleaflet map
 '''
 
 
+import bqplot as bq
 import datetime
 import ipyleaflet
 import ipywidgets
@@ -15,6 +16,33 @@ from earthsight.imagery.sentinel2 import Sentinel2
 BASEMAP_DEFAULT = ipyleaflet.basemaps.OpenStreetMap.HOT
 CENTER_DEFAULT = (35.7004, -105.9136)
 ZOOM_DEFAULT = 9
+
+
+ZOOM_TO_SCALE = {
+    0: 156412,
+    1: 78206,
+    2: 39103,
+    3: 19551,
+    4: 9776,
+    5: 4888,
+    6: 2444,
+    7: 1222,
+    8: 611,
+    9: 305,
+    10: 152,
+    11: 76,
+    12: 38,
+    13: 19,
+    14: 10,
+    15: 5,
+    16: 3,
+    17: 2,
+    18: 1,
+    19: 0.5,
+    20: 0.1
+}
+
+
 
 class EarthMap:
     def __init__(self,
@@ -129,6 +157,80 @@ class EarthMap:
             band_parms = (bands, mins, maxs)
 
         return band_parms
+
+
+    def _build_bq_figure(self, x, y, color):
+        x_scale = bq.LinearScale()
+        y_scale = bq.LinearScale()
+
+        x_axis = bq.Axis(
+            scale=x_scale, 
+            tick_values=None, 
+            num_ticks=3
+        )
+        y_axis = bq.Axis(
+            scale=y_scale, 
+            tick_values=None, 
+            num_ticks=0, 
+            orientation='vertical', 
+            visible=False
+        )
+
+        line = bq.Lines(
+            x=x, 
+            y=y, 
+            scales={
+                'x': x_scale, 
+                'y': y_scale
+            }, 
+            colors=[color],
+            selected_style={'opacity': '1'},
+            unselected_style={'opacity': '0.2'}
+        )
+
+        fast_sel = bq.interacts.FastIntervalSelector(
+            marks=[line], 
+            scale=x_scale
+        )
+
+        fig = bq.Figure(
+            title=color, 
+            marks=[line], 
+            axes=[x_axis, y_axis],
+            fig_margin={
+                'top': 40, 
+                'bottom': 40, 
+                'left': 40, 
+                'right': 40
+            },
+            interaction=fast_sel
+        )
+        fig.layout.width = '225px'
+        fig.layout.height = '225px'
+
+        return fig
+
+
+    def _compute_hist(self, event):
+        bounds = self.map.bounds
+        bands, _, _ = self._get_band_parms()
+        scale = ZOOM_TO_SCALE[self.map.zoom]
+        
+        hist = self.s2.compute_hist(bounds, bands, scale)
+        colors = ['red', 'green', 'blue']
+        
+        figs = list()
+        for bidx, band in enumerate(bands):
+            hist_data = hist[band]
+            color = colors[bidx]
+
+            fig = self._build_bq_figure(hist_data[0], hist_data[1], color)
+            figs.append(fig)
+
+        figures = ipywidgets.HBox(figs)
+        hist_control = ipyleaflet.WidgetControl(widget=figures, position='bottomleft')
+        self.map.add_control(hist_control)
+
 
     
     def _s2_button_click(self, event):
@@ -327,7 +429,15 @@ class EarthMap:
             button_style='warning',
             tooltip='Compute histogram across bands over map region'
         )
-        
+        self.histogram_button.on_click(self._compute_hist)
+
+        #self.histogram_figures = list()
+        #self.histogram_figures.append(plt.figure(figsize=(1,1)))
+        #self.histogram_figures.append(plt.figure(figsize=(1,1)))
+        #self.histogram_figures.append(plt.figure(figsize=(1,1)))
+        #self.histogram_figure = ipywidgets.VBox(self.histogram_figures)
+        #self.histogram_figure.layout.display = 'none'
+
         self.indiv_band_buttons = ipywidgets.VBox(
             [self.band_presets,
              self.single_band,
@@ -336,6 +446,7 @@ class EarthMap:
              self.single_band_panes[1],
              self.single_band_panes[2],
              self.histogram_button]
+             #self.histogram_figure]
         )
         
         self.indiv_band_buttons.layout.display = 'none'
@@ -345,7 +456,7 @@ class EarthMap:
             widget=self.band_button,
             position='topleft'
         )
-
+#
         indiv_band_button_control = ipyleaflet.WidgetControl(
             widget=self.indiv_band_buttons,
             position='topleft'
@@ -368,6 +479,7 @@ class EarthMap:
         self.s2_date_start = ipywidgets.DatePicker(
             description='Start',
             value=datetime.datetime(2020, 4, 1),
+            continuous_update=False,
             disabled=False
         )
         self.s2_date_start.observe(self._s2_observe)
@@ -375,6 +487,7 @@ class EarthMap:
         self.s2_date_end = ipywidgets.DatePicker(
             description='End',
             value=datetime.datetime(2020, 8, 1),
+            continuous_update=False,
             disabled=False
         ) 
         self.s2_date_end.observe(self._s2_observe)
