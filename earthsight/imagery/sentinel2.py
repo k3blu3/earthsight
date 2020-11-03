@@ -15,42 +15,58 @@ S2_COLLECTION_IDS = ['COPERNICUS/S2',
                      'COPERNICUS/S2_CLOUD_PROBABILITY']
 
 
-S2_BANDS = [('B1', 0, 10000), 
-            ('B2', 0, 10000), 
-            ('B3', 0, 10000),
-            ('B4', 0, 10000),
-            ('B5', 0, 10000),
-            ('B6', 0, 10000),
-            ('B7', 0, 10000),
-            ('B8', 0, 10000),
-            ('B8A', 0, 10000),
-            ('B9', 0, 10000),
-            ('B10', 0, 10000),
-            ('B11', 0, 10000),
-            ('B12', 0, 10000),
-            ('probability', 0, 100)] # cloud probability
+S2_BANDS = {
+    'B1': (0, 10000),
+    'B2': (0, 10000),
+    'B3': (0, 10000),
+    'B4': (0, 10000),
+    'B5': (0, 10000),
+    'B6': (0, 10000),
+    'B7': (0, 10000),
+    'B8': (0, 10000),
+    'B8A': (0, 10000),
+    'B9': (0, 10000),
+    'B10': (0, 10000),
+    'B11': (0, 10000),
+    'B12': (0, 10000),
+    'probability': (0, 100),
+}
 
 
 S2_BAND_PRESETS = {
-    'True Color': (['B4', 'B3', 'B2'],
+    'true color': (['B4', 'B3', 'B2'],
+                   [500, 500, 500],
+                   [3500, 3500, 3500],
                    [0, 0, 0],
-                   [3000, 3000, 3000]),
-    'Color Infrared': (['B8', 'B4', 'B3'],
+                   [10000, 10000, 10000]),
+    'color infrared': (['B8', 'B4', 'B3'],
+                       [500, 500, 500],
+                       [3500, 3500, 3500],
                        [0, 0, 0],
-                       [3000, 3000, 3000]),
-    'Short-Wave Infrared': (['B12', 'B8A', 'B4'],
+                       [10000, 10000, 10000]),
+    'short-wave infrared': (['B12', 'B8A', 'B4'],
+                            [500, 500, 500],
+                            [7500, 3500, 3500],
                             [0, 0, 0],
-                            [7500, 3000, 3000]),
-    'Agriculture': (['B11', 'B8', 'B2'],
+                            [10000, 10000, 10000]),
+    'agriculture': (['B11', 'B8', 'B2'],
+                    [500, 500, 500],
+                    [3500, 3500, 3500],
                     [0, 0, 0],
-                    [3000, 3000, 3000]),
-    'Geology': (['B12', 'B11', 'B8'],
+                    [10000, 10000, 10000]),
+    'geology': (['B12', 'B11', 'B8'],
+                [500, 500, 500],
+                [3500, 3500, 3500],
                 [0, 0, 0],
-                [3000, 3000, 3000]),
-    'Bathymetric': (['B4', 'B3', 'B1'],
+                [10000, 10000, 10000]),
+    'bathymetric': (['B4', 'B3', 'B1'],
+                    [500, 500, 500],
+                    [3500, 3500, 3500],
                     [0, 0, 0],
-                    [3000, 3000, 3000]),
-    'Clouds': (['probability'],
+                    [10000, 10000, 10000]),
+    'clouds': (['probability'],
+               [0],
+               [100],
                [0],
                [100])
 }
@@ -67,6 +83,7 @@ class Sentinel2:
         self.bands = bands
         self.ic = None
         self.img = None
+        self.vis_params = None
 
 
     def _build_ic(self):
@@ -152,7 +169,7 @@ class Sentinel2:
         return hist_dict
 
 
-    def update(self, start_datetime, end_datetime, cloudy_pixel_pct, cloud_mask, temporal_op):
+    def update_ic(self, start_datetime, end_datetime, cloudy_pixel_pct, cloud_mask, temporal_op):
         self.ic = self._build_ic()
         self._filter_clouds(cloudy_pixel_pct)
         
@@ -163,13 +180,18 @@ class Sentinel2:
         self._ic_to_image(temporal_op)
 
 
-    def visualize(self, band_parms):
-        bands, mins, maxs = band_parms
-        vis_params = {'min': mins,
-                      'max': maxs,
+    def update_viz(self, band_parms):
+        bands, los, his, _, _ = band_parms
+        vis_params = {'min': los,
+                      'max': his,
                       'bands': bands}
 
-        return image_to_tiles(self.img, vis_params)
+        self.vis_params = vis_params
+
+
+    def get_url(self):
+        url = image_to_tiles(self.img, self.vis_params)
+        return url
 
 
     def get_bands(self):
