@@ -68,19 +68,21 @@ class EarthWidgets:
     
     def interact_band_presets(self, change):
         preset = self.band_presets.value
-        band_parms = self.imagery.get_band_presets()[preset]
-        band_names, band_los, band_his, band_mins, band_maxs = band_parms
+        band_names, band_los, band_his = self.imagery.get_band_presets()[preset]
 
         if len(band_names) == 1:
             self.single_band.value = True
         else:
             self.single_band.value = False
 
-        for idx in range(len(band_names)):
-            self.band_selectors[idx].value = band_names[idx]
-            self.band_sliders[idx].value = [band_los[idx], band_his[idx]]
-            self.band_sliders[idx].min = band_mins[idx]
-            self.band_sliders[idx].max = band_maxs[idx]
+        for idx, (band_name, band_lo, band_hi) in enumerate(zip(band_names, band_los, band_his)):
+            band = self.imagery.bands.get(band_name)
+            band.set_range(band_lo, band_hi)
+
+            self.band_selectors[idx].value = band.get_name()
+            self.band_sliders[idx].value = band.get_range()
+            self.band_sliders[idx].min = band.get_min()
+            self.band_sliders[idx].max = band.get_max()
 
     
     def interact_single_band(self, change):
@@ -99,8 +101,9 @@ class EarthWidgets:
 
     
     def interact_band_change(self, change):
-        band_parms = self.get_band_parms()
-        self.imagery.update_viz(band_parms)
+        band_names = self.get_current_bands()
+        viz_params = self.get_viz_params(band_names)
+        self.imagery.update_viz(viz_params)
         self.update_layer()
     
 
@@ -131,33 +134,37 @@ class EarthWidgets:
     # ------------- #
     # -- GETTERS -- #
     # ------------- #
-    def get_band_parms(self):
-        if self.single_band.value == True:
-            band_name = self.band_selectors[0].value
-            band_los, band_his = self.band_sliders[0].value
-            band_mins, band_maxs = self.imagery.get_bands()[band_name]
+    def get_current_bands(self):
+        band_names = list()
+        for band_selector, band_slider in zip(self.band_selectors, self.band_sliders):
+            band_name = band_selector.value
+            band = self.imagery.bands.get(band_name)
+            band.set_range(band_slider.value[0], band_slider.value[1])
 
-            band_parms = ([band_name], [band_los], [band_his], [band_mins], [band_maxs])
-        else:
-            band_names = list()
-            band_los = list()
-            band_his = list()
-            band_mins = list()
-            band_maxs = list()
-            for band_selector, band_slider, band_pane in zip(self.band_selectors, self.band_sliders, self.band_panes):
-                band_name = band_selector.value
-                band_lo, band_hi = band_slider.value
-                band_min, band_max = self.imagery.get_bands()[band_name]
-                
-                band_names.append(band_name)
-                band_los.append(band_lo)
-                band_his.append(band_hi)
-                band_mins.append(band_min)
-                band_maxs.append(band_max)
+            if self.single_band.value == True:
+                break
 
-            band_parms = (band_names, band_los, band_his, band_mins, band_maxs)
+            band_names.append(band_name)
 
-        return band_parms
+        return band_names
+
+
+    def get_viz_params(self, band_names):
+        band_los = list()
+        band_his = list()
+
+        for band_name in band_names:
+            band = self.imagery.bands.get(band_name)
+            lo, hi = band.get_range()
+            
+            band_los.append(lo)
+            band_his.append(hi)
+
+        viz_params = {'min': band_los,
+                      'max': band_his,
+                      'bands': band_names}
+
+        return viz_params
 
     
     def get_hist_figure(self, x, y, color, bidx):
@@ -328,7 +335,7 @@ class EarthWidgets:
 
         self.single_band.observe(self.interact_single_band, names='value')
 
-        all_band_names = self.imagery.get_bands().keys()
+        all_band_names = self.imagery.get_band_defs().keys()
 
         colors = ['red', 'green', 'blue']
         defaults = ['B4', 'B3', 'B2']
