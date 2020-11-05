@@ -7,6 +7,7 @@ Sentinel-2 class definition that provides imagery on-demand via GEE
 
 import ee
 
+from earthsight.imagery.bands import Bands
 from earthsight.utils.gee import (image_to_tiles,
                                   bounds_to_geom)
 
@@ -15,7 +16,10 @@ S2_COLLECTION_IDS = ['COPERNICUS/S2',
                      'COPERNICUS/S2_CLOUD_PROBABILITY']
 
 
-S2_BANDS = {
+S2_MAX_CLOUD_PROBABILITY = 65
+
+
+S2_BAND_DEFS = {
     'B1': (0, 10000),
     'B2': (0, 10000),
     'B3': (0, 10000),
@@ -35,55 +39,48 @@ S2_BANDS = {
 
 S2_BAND_PRESETS = {
     'true color': (['B4', 'B3', 'B2'],
-                   [500, 500, 500],
-                   [3500, 3500, 3500],
-                   [0, 0, 0],
-                   [10000, 10000, 10000]),
+                   [500, 500, 500], # lo
+                   [3500, 3500, 3500]), # hi
     'color infrared': (['B8', 'B4', 'B3'],
                        [500, 500, 500],
-                       [3500, 3500, 3500],
-                       [0, 0, 0],
-                       [10000, 10000, 10000]),
+                       [3500, 3500, 3500]),
     'short-wave infrared': (['B12', 'B8A', 'B4'],
                             [500, 500, 500],
-                            [7500, 3500, 3500],
-                            [0, 0, 0],
-                            [10000, 10000, 10000]),
+                            [7500, 3500, 3500]),
     'agriculture': (['B11', 'B8', 'B2'],
                     [500, 500, 500],
-                    [3500, 3500, 3500],
-                    [0, 0, 0],
-                    [10000, 10000, 10000]),
+                    [3500, 3500, 3500]),
     'geology': (['B12', 'B11', 'B8'],
                 [500, 500, 500],
-                [3500, 3500, 3500],
-                [0, 0, 0],
-                [10000, 10000, 10000]),
+                [3500, 3500, 3500]),
     'bathymetric': (['B4', 'B3', 'B1'],
                     [500, 500, 500],
-                    [3500, 3500, 3500],
-                    [0, 0, 0],
-                    [10000, 10000, 10000]),
+                    [3500, 3500, 3500]),
     'clouds': (['probability'],
                [0],
-               [100],
-               [0],
-               [100])
+               [100]),
 }
 
 
-S2_MAX_CLOUD_PROBABILITY = 65
+S2_BANDS = Bands()
+for key in S2_BAND_DEFS.keys():
+    name = key
+    min_val, max_val = S2_BAND_DEFS[key]
+    S2_BANDS.add(name, min_val, max_val)
 
 
 class Sentinel2:
     def __init__(self,
                  collection_ids=S2_COLLECTION_IDS,
-                 bands=S2_BANDS):
+                 bands=S2_BANDS,
+                 band_presets=S2_BAND_PRESETS):
         self.collection_ids = collection_ids
         self.bands = bands
+        self.band_presets = band_presets
+
         self.ic = None
         self.img = None
-        self.vis_params = None
+        self.viz_params = None
 
 
     def _build_ic(self):
@@ -95,12 +92,18 @@ class Sentinel2:
         s2joined = ee.Join.saveFirst('cloud_mask').apply(
             primary=s2,
             secondary=s2cloud,
-            condition=ee.Filter.equals(leftField='system:index',
-                                       rightField='system:index')
+            condition=ee.Filter.equals(
+                leftField='system:index',
+                rightField='system:index'
+            )
         )
 
         # add probability band into the original S2 image collection
-        s2combined = ee.ImageCollection(s2joined).map(lambda img: img.addBands(img.get('cloud_mask')))
+        s2combined = ee.ImageCollection(s2joined).map(
+            lambda img: img.addBands(
+                img.get('cloud_mask')
+            )
+        )
 
         return s2combined
 
@@ -147,9 +150,9 @@ class Sentinel2:
         return img.updateMask(edge_mask)
 
 
-    def compute_hist(self, bounds, bands, scale):
+    def compute_hist(self, bounds, band_names, scale):
         roi = bounds_to_geom(bounds)
-        hist_img = self.img.select(bands)
+        hist_img = self.img.select(band_names)
         hist = hist_img.reduceRegion(
             reducer=ee.Reducer.histogram(),
             geometry=roi,
@@ -161,8 +164,8 @@ class Sentinel2:
         hist_bands = hist.keys().getInfo()
         hist_list = hist.values().getInfo()
         hist_dict = dict()
-        for band in bands:
-            band_idx = hist_bands.index(band)
+        for band_name in band_names:
+            band_idx = hist_bands.index(band_name)
             hist_dict[band] = (hist_list[band_idx]['bucketMeans'],
                                hist_list[band_idx]['histogram'])
 
@@ -180,30 +183,21 @@ class Sentinel2:
         self._ic_to_image(temporal_op)
 
 
-    def update_viz(self, band_parms):
-        bands, los, his, _, _ = band_parms
-        vis_params = {'min': los,
-                      'max': his,
-                      'bands': bands}
-
-        self.vis_params = vis_params
+    def update_viz(self, viz_params):
+        self.viz_params = viz_params
 
 
     def get_url(self):
-        url = image_to_tiles(self.img, self.vis_params)
+        url = image_to_tiles(self.img, self.viz_params)
         return url
 
-
-    def get_bands(self):
-        return S2_BANDS
+    
+    def get_band_defs(self):
+        return S2_BAND_DEFS
 
 
     def get_band_presets(self):
         return S2_BAND_PRESETS
-
-
-        
-
 
 
 
