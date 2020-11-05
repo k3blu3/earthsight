@@ -5,7 +5,6 @@ Class definition for Band and Bands, which provide a common interface for intera
 '''
 
 
-
 class Bands:
     def __init__(self):
         self.bands = list()

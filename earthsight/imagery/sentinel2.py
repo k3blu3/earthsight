@@ -8,6 +8,7 @@ Sentinel-2 class definition that provides imagery on-demand via GEE
 import ee
 
 from earthsight.imagery.bands import Bands
+from earthsight.imagery.imgparams import ImgParams
 from earthsight.utils.gee import (image_to_tiles,
                                   bounds_to_geom)
 
@@ -69,14 +70,26 @@ for key in S2_BAND_DEFS.keys():
     S2_BANDS.add(name, min_val, max_val)
 
 
+S2_IMG_PARAMS = ImgParams()
+S2_IMG_PARAMS.set(
+    start_datetime='2019-07-01',
+    end_datetime='2019-10-01',
+    cloudy_pixel_pct=100,
+    cloud_mask=False,
+    temporal_op='mean'
+)
+
+
 class Sentinel2:
     def __init__(self,
                  collection_ids=S2_COLLECTION_IDS,
                  bands=S2_BANDS,
-                 band_presets=S2_BAND_PRESETS):
+                 band_presets=S2_BAND_PRESETS,
+                 img_params=S2_IMG_PARAMS):
         self.collection_ids = collection_ids
         self.bands = bands
         self.band_presets = band_presets
+        self.img_params = img_params
 
         self.ic = None
         self.img = None
@@ -108,7 +121,8 @@ class Sentinel2:
         return s2combined
 
 
-    def _ic_to_image(self, temporal_op):
+    def _ic_to_image(self):
+        temporal_op = self.img_params.get_temporal_op()
         if temporal_op == 'mean':
             self.img = self.ic.mean()
         elif temporal_op == 'min':
@@ -121,18 +135,24 @@ class Sentinel2:
             self.img = self.ic.mosaic()
 
     
-    def _filter_date(self, start_datetime, end_datetime):
+    def _filter_date(self):
+        start_datetime = self.img_params.get_start_datetime()
+        end_datetime = self.img_params.get_end_datetime()
+
         self.ic = self.ic.filterDate(start_datetime, end_datetime)
 
     
-    def _filter_clouds(self, cloudy_pixel_pct):
+    def _filter_clouds(self):
+        cloudy_pixel_pct = self.img_params.get_cloudy_pixel_pct()
         cloud_filt = ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', cloudy_pixel_pct)
         self.ic = self.ic.filter(cloud_filt)
 
 
     def _mask_clouds(self):
-        self.ic = self.ic.map(self.__edge_mask)
-        self.ic = self.ic.map(self.__cloud_mask)
+        mask_clouds = self.img_params.get_cloud_mask()
+        if mask_clouds:
+            self.ic = self.ic.map(self.__edge_mask)
+            self.ic = self.ic.map(self.__cloud_mask)
 
 
     def __cloud_mask(self, img):
@@ -166,21 +186,20 @@ class Sentinel2:
         hist_dict = dict()
         for band_name in band_names:
             band_idx = hist_bands.index(band_name)
-            hist_dict[band] = (hist_list[band_idx]['bucketMeans'],
-                               hist_list[band_idx]['histogram'])
+            hist_dict[band_name] = (
+                hist_list[band_idx]['bucketMeans'],
+                hist_list[band_idx]['histogram']
+            )
 
         return hist_dict
 
 
-    def update_ic(self, start_datetime, end_datetime, cloudy_pixel_pct, cloud_mask, temporal_op):
+    def update_ic(self):
         self.ic = self._build_ic()
-        self._filter_clouds(cloudy_pixel_pct)
-        
-        if cloud_mask:
-            self._mask_clouds()
-
-        self._filter_date(start_datetime, end_datetime)
-        self._ic_to_image(temporal_op)
+        self._filter_clouds()
+        self._mask_clouds()
+        self._filter_date()
+        self._ic_to_image()
 
 
     def update_viz(self, viz_params):

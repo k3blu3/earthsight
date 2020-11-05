@@ -45,14 +45,19 @@ class EarthWidgets:
     def interact_img_pane(self, change):
         start_datetime = self.date_start.value.strftime('%Y-%m-%d')
         end_datetime = self.date_end.value.strftime('%Y-%m-%d')
+        cloudy_pixel_pct = self.cloudy_pixel.value
+        cloud_mask = self.cloud_mask.value
+        temporal_op = self.temporal_op.value
 
-        self.imagery.update_ic(
+        self.imagery.img_params.set(
             start_datetime,
             end_datetime,
             self.cloudy_pixel.value,
             self.cloud_mask.value,
             self.temporal_op.value
         )
+
+        self.imagery.update_ic()
 
         self.update_layer()
 
@@ -171,11 +176,7 @@ class EarthWidgets:
         x_scale = bq.LinearScale()
         y_scale = bq.LinearScale()
 
-        x_axis = bq.Axis(
-            scale=x_scale,
-            tick_values=None,
-            num_ticks=3
-        )
+        x_axis = bq.Axis(scale=x_scale, tick_values=None, num_ticks=3)
         y_axis = bq.Axis(
             scale=y_scale,
             tick_values=None,
@@ -196,11 +197,7 @@ class EarthWidgets:
             unselected_style={'opacity': '0.2'}
         )
 
-        fast_sel = bq.interacts.FastIntervalSelector(
-            marks=[line],
-            scale=x_scale,
-            color='orange'
-        )
+        fast_sel = bq.interacts.FastIntervalSelector(marks=[line], scale=x_scale, color='orange')
 
         fig = bq.Figure(
             title=color,
@@ -225,7 +222,7 @@ class EarthWidgets:
     # ------------- #
     def build_img_button(self):
         self.img_button = ipyw.Button(
-            description='Sentinel-2',
+            description='Imagery',
             disabled=False,
             button_style='info',
             tooltip='Configure imagery options'
@@ -236,24 +233,27 @@ class EarthWidgets:
 
     def build_img_pane(self):
         # pick start date
+        start_datetime = self.imagery.img_params.get_start_datetime()
         self.date_start = ipyw.DatePicker(
             description='start',
-            value=datetime.datetime(2020, 4, 1),
+            value=datetime.datetime.strptime(start_datetime, '%Y-%m-%d'),
             continuous_update=False,
             disabled=False
         )
 
         # pick end date
+        end_datetime = self.imagery.img_params.get_end_datetime()
         self.date_end = ipyw.DatePicker(
             description='end',
-            value=datetime.datetime(2020, 8, 1),
+            value=datetime.datetime.strptime(end_datetime, '%Y-%m-%d'),
             continuous_update=False,
             disabled=False
         )
 
         # select cloud fraction
+        cloudy_pixel_pct = self.imagery.img_params.get_cloudy_pixel_pct()
         self.cloudy_pixel = ipyw.IntSlider(
-            value=100,
+            value=cloudy_pixel_pct,
             min=0,
             max=100,
             step=1,
@@ -266,17 +266,19 @@ class EarthWidgets:
         )
 
         # mask clouds
+        cloud_mask = self.imagery.img_params.get_cloud_mask()
         self.cloud_mask = ipyw.Checkbox(
-            value=False,
+            value=cloud_mask,
             description='mask clouds',
             disabled=False,
             continuous_update=False
         )
 
         # select how to composite
+        temporal_op = self.imagery.img_params.get_temporal_op()
         self.temporal_op = ipyw.Dropdown(
             options=['mean', 'min', 'max', 'median', 'mosaic'],
-            value='mean',
+            value=temporal_op,
             description='show',
             disabled=False,
             continuous_update=False
@@ -337,6 +339,7 @@ class EarthWidgets:
 
         all_band_names = self.imagery.get_band_defs().keys()
 
+        # TODO: band defaults should not live here in widget initialization
         colors = ['red', 'green', 'blue']
         defaults = ['B4', 'B3', 'B2']
         self.band_selectors = list()
@@ -407,8 +410,7 @@ class EarthWidgets:
 
     def build_hist_pane(self):
         bounds = self.map.bounds
-        band_parms = self.get_band_parms()
-        band_names, _, _, _, _ = band_parms
+        band_names = self.get_current_bands()
         scale = ZOOM_TO_SCALE[self.map.zoom]
 
         hist = self.imagery.compute_hist(bounds, band_names, scale)
