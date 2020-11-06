@@ -10,29 +10,59 @@ import ipyleaflet as ipyl
 import ipywidgets as ipyw
 import bqplot as bq
 
-
-from earthsight.imagery.sentinel2 import Sentinel2
 from earthsight.utils.constants import ZOOM_TO_SCALE
 
 
 class EarthWidgets:
-    def __init__(self, m):
+    def __init__(self, m, layers):
         self.map = m
-        self.imagery = Sentinel2()
+        self.layers = layers
 
-
-    def update_layer(self):
-        url = self.imagery.get_url()
-        if len(self.map.layers) == 1:
-            layer = ipyl.TileLayer(url=url, name='Sentinel-2')
-            self.map.add_layer(layer)
-        else:
-            self.map.layers[-1].url = url
-
-
+    
     # ------------------ #
     # -- INTERACTIONS -- #
     # ------------------ #
+    def interact_layer_button(self, b):
+        if self.layer_button.button_style == 'info':
+            self.layer_button.button_style= 'success'
+            self.layer_pane.layout.display = ''
+        else:
+            self.layer_button.button_style = 'info'
+            self.layer_pane.layout.display = 'none'
+    
+
+    def interact_basemap(self, change):
+        basemap_eval = BASEMAPS[self.basemap_selector.value]
+        self.map.basemap = eval(basemap_eval)
+
+    
+    def interact_layer_add(self, change):
+        '''
+        add a new layer pane widget
+        add a new map layer
+        '''
+        
+        self.build_single_layer()
+        self.single_layers[-1].observe(interact_single_layer, names='value')
+        
+        self.layers.append(Layer(current_layer.name, Sentinel2()))
+
+
+    def interact_layer_text(self, change):
+        '''
+        update the name value of the layer
+        '''
+
+
+
+
+    def interact_single_layer(self, change):
+        pass
+
+        
+
+
+
     def interact_img_button(self, b):
         if self.img_button.button_style == 'info':
             self.img_button.button_style= 'success'
@@ -49,7 +79,7 @@ class EarthWidgets:
         cloud_mask = self.cloud_mask.value
         temporal_op = self.temporal_op.value
 
-        self.imagery.img_params.set(
+        self.img_src.img_params.set(
             start_datetime,
             end_datetime,
             self.cloudy_pixel.value,
@@ -57,7 +87,7 @@ class EarthWidgets:
             self.temporal_op.value
         )
 
-        self.imagery.update_ic()
+        self.img_src.update_ic()
 
         self.update_layer()
 
@@ -73,7 +103,7 @@ class EarthWidgets:
     
     def interact_band_presets(self, change):
         preset = self.band_presets.value
-        band_names, band_los, band_his = self.imagery.get_band_presets()[preset]
+        band_names, band_los, band_his = self.img_src.get_band_presets()[preset]
 
         if len(band_names) == 1:
             self.single_band.value = True
@@ -81,7 +111,7 @@ class EarthWidgets:
             self.single_band.value = False
 
         for idx, (band_name, band_lo, band_hi) in enumerate(zip(band_names, band_los, band_his)):
-            band = self.imagery.bands.get(band_name)
+            band = self.img_src.bands.get(band_name)
             band.set_range(band_lo, band_hi)
 
             self.band_selectors[idx].value = band.get_name()
@@ -108,7 +138,7 @@ class EarthWidgets:
     def interact_band_change(self, change):
         band_names = self.get_current_bands()
         viz_params = self.get_viz_params(band_names)
-        self.imagery.update_viz(viz_params)
+        self.img_src.update_viz(viz_params)
         self.update_layer()
     
 
@@ -143,7 +173,7 @@ class EarthWidgets:
         band_names = list()
         for band_selector, band_slider in zip(self.band_selectors, self.band_sliders):
             band_name = band_selector.value
-            band = self.imagery.bands.get(band_name)
+            band = self.img_src.bands.get(band_name)
             band.set_range(band_slider.value[0], band_slider.value[1])
 
             if self.single_band.value == True:
@@ -159,7 +189,7 @@ class EarthWidgets:
         band_his = list()
 
         for band_name in band_names:
-            band = self.imagery.bands.get(band_name)
+            band = self.img_src.bands.get(band_name)
             lo, hi = band.get_range()
             
             band_los.append(lo)
@@ -220,12 +250,46 @@ class EarthWidgets:
     # ------------- #
     # -- WIDGETS -- #
     # ------------- #
+    def build_layer_pane(self):
+        basemaps = BASEMAPS.keys()
+        self.basemap_selector = ipyw.Dropdown(
+            options=basemaps,
+            value=basemaps[0],
+            description='Basemap',
+            continuous_update=False
+        )
+
+        self.basemap_selector.observe(self.interact_basemap, names='value')
+
+        button_layout = ipyw.Layout(width='auto', height='auto', border='solid')
+        self.layer_add = ipyw.Button(
+            description='',
+            icon='plus',
+            button_style='success',
+            layout=button_layout,
+            tooltip='Add current layer'
+        )
+
+        self.layer_add.on_click(self.interact_layer_add)
+
+        self.single_layers = list()
+        self.interact_layer_add(None)
+
+        layer_top_pane = ipyw.HBox([self.basemap_selector, self.layer_add])
+        self.layer_pane = ipyw.VBox([layer_top_pane, ipyw.HBox([self.single_layers])])
+
+        # don't displaly until the layers button is pressed
+        self.layer_pane.layout.display = 'none'
+
+
     def build_img_button(self):
+        button_layout = ipyw.Layout(width='auto', height='auto', border='solid')
         self.img_button = ipyw.Button(
-            description='Imagery',
-            disabled=False,
+            description='',
+            icon='globe',
             button_style='info',
-            tooltip='Configure imagery options'
+            tooltip='Configure imagery options',
+            layout=button_layout
         )
 
         self.img_button.on_click(self.interact_img_button)
@@ -233,32 +297,29 @@ class EarthWidgets:
 
     def build_img_pane(self):
         # pick start date
-        start_datetime = self.imagery.img_params.get_start_datetime()
+        start_datetime = self.img_src.img_params.get_start_datetime()
         self.date_start = ipyw.DatePicker(
             description='start',
             value=datetime.datetime.strptime(start_datetime, '%Y-%m-%d'),
             continuous_update=False,
-            disabled=False
         )
 
         # pick end date
-        end_datetime = self.imagery.img_params.get_end_datetime()
+        end_datetime = self.img_src.img_params.get_end_datetime()
         self.date_end = ipyw.DatePicker(
             description='end',
             value=datetime.datetime.strptime(end_datetime, '%Y-%m-%d'),
             continuous_update=False,
-            disabled=False
         )
 
         # select cloud fraction
-        cloudy_pixel_pct = self.imagery.img_params.get_cloudy_pixel_pct()
+        cloudy_pixel_pct = self.img_src.img_params.get_cloudy_pixel_pct()
         self.cloudy_pixel = ipyw.IntSlider(
             value=cloudy_pixel_pct,
             min=0,
             max=100,
             step=1,
             description='cloudy',
-            disabled=False,
             continuous_update=False,
             orientation='horizontal',
             readout=True,
@@ -266,21 +327,19 @@ class EarthWidgets:
         )
 
         # mask clouds
-        cloud_mask = self.imagery.img_params.get_cloud_mask()
+        cloud_mask = self.img_src.img_params.get_cloud_mask()
         self.cloud_mask = ipyw.Checkbox(
             value=cloud_mask,
             description='mask clouds',
-            disabled=False,
             continuous_update=False
         )
 
         # select how to composite
-        temporal_op = self.imagery.img_params.get_temporal_op()
+        temporal_op = self.img_src.img_params.get_temporal_op()
         self.temporal_op = ipyw.Dropdown(
             options=['mean', 'min', 'max', 'median', 'mosaic'],
             value=temporal_op,
             description='show',
-            disabled=False,
             continuous_update=False
         )
 
@@ -306,23 +365,24 @@ class EarthWidgets:
 
 
     def build_viz_button(self):
+        button_layout = ipyw.Layout(width='auto', height='auto', border='solid')
         self.viz_button = ipyw.Button(
-            description='Visualize',
-            disabled=False,
+            description='',
+            icon='eye',
             button_style='info',
-            tooltip='Configure visualization options'
+            tooltip='Configure visualization options',
+            layout=button_layout
         )
         
         self.viz_button.on_click(self.interact_viz_button)
 
 
     def build_viz_pane(self):
-        band_preset_options = self.imagery.get_band_presets().keys()
+        band_preset_options = self.img_src.get_band_presets().keys()
         self.band_presets = ipyw.Select(
             options=band_preset_options,
             value=list(band_preset_options)[0],
             description='see in',
-            disabled=False,
             continuous_update=False
         )
 
@@ -331,13 +391,12 @@ class EarthWidgets:
         self.single_band = ipyw.Checkbox(
             value=False,
             description='single band',
-            disabled=False,
             continuous_update=False
         )
 
         self.single_band.observe(self.interact_single_band, names='value')
 
-        all_band_names = self.imagery.get_band_defs().keys()
+        all_band_names = self.img_src.get_band_defs().keys()
 
         # TODO: band defaults should not live here in widget initialization
         colors = ['red', 'green', 'blue']
@@ -349,7 +408,6 @@ class EarthWidgets:
                 options=all_band_names,
                 value=default,
                 description=color,
-                disabled=False,
                 continuous_update=False
             )
             
@@ -358,7 +416,6 @@ class EarthWidgets:
                 min=0,
                 max=10000,
                 step=1,
-                disabled=False,
                 continuous_update=False,
                 orientation='horizontal',
                 readout=True,
@@ -398,11 +455,13 @@ class EarthWidgets:
 
 
     def build_hist_button(self):
+        button_layout = ipyw.Layout(width='auto', height='auto', border='solid')
         self.hist_button = ipyw.Button(
-            description='Histogram',
-            disabled=False,
+            description='',
+            icon='chart-bar',
             button_style='info',
-            tooltip='Compute histogram across selected bands'
+            tooltip='Compute histogram across selected bands',
+            layout=button_layout
         )
 
         self.hist_button.on_click(self.interact_hist_button)
@@ -413,7 +472,7 @@ class EarthWidgets:
         band_names = self.get_current_bands()
         scale = ZOOM_TO_SCALE[self.map.zoom]
 
-        hist = self.imagery.compute_hist(bounds, band_names, scale)
+        hist = self.img_src.compute_hist(bounds, band_names, scale)
 
         if self.single_band.value == True:
             colors = ['black']

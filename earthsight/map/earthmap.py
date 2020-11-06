@@ -11,6 +11,7 @@ import ipyleaflet as ipyl
 
 
 from earthsight.map.earthwidgets import EarthWidgets
+from earthsight.imagery.sentinel2 import Sentinel2
 from earthsight.utils.constants import (BASEMAP_DEFAULT,
                                         CENTER_DEFAULT,
                                         ZOOM_DEFAULT)
@@ -26,9 +27,12 @@ class EarthMap:
 
         # add basic interactive controls
         self.add_base_controls()
+
+        # initialize default Sentinel-2 layer
+        self.layers = Layer('Sentinel-2', Sentinel2())
         
         # add custom widgets
-        self.widgets = EarthWidgets(self.map)
+        self.widgets = EarthWidgets(self.map, self.layers)
         self.add_custom_widgets()
 
 
@@ -79,6 +83,10 @@ class EarthMap:
 
 
     def add_custom_widgets(self):
+        # add layer button and corresponding pane to the map
+        self.widgets.build_layer_button()
+        self.widgets.build_layer_pane()
+
         # add img button and corresponding pane to the map
         self.widgets.build_img_button()
         self.widgets.build_img_pane()
