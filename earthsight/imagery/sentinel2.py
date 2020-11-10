@@ -6,6 +6,7 @@ Sentinel-2 class definition that provides imagery on-demand via GEE
 
 
 import ee
+ee.Initialize()
 
 from earthsight.imagery.bands import Bands
 from earthsight.imagery.imgparams import ImgParams
@@ -94,6 +95,12 @@ class Sentinel2:
         self.ic = None
         self.img = None
         self.viz_params = None
+
+        # initialize image collection
+        self.update_ic()
+
+        # initialize visualization
+        self.update_viz(['B4', 'B3', 'B2'])
 
 
     def _build_ic(self):
@@ -202,8 +209,28 @@ class Sentinel2:
         self._ic_to_image()
 
 
-    def update_viz(self, viz_params):
-        self.viz_params = viz_params
+    def update_viz(self, band_names):
+        self.viz_params = self.get_viz_params(band_names)
+
+
+    def get_viz_params(self, band_names):
+        band_los = list()
+        band_his = list()
+
+        for band_name in band_names:
+            band = self.bands.get(band_name)
+            lo, hi = band.get_range()
+
+            band_los.append(lo)
+            band_his.append(hi)
+
+        viz_params = {
+            'min': band_los,
+            'max': band_his,
+            'bands': band_names
+        }
+
+        return viz_params
 
 
     def get_url(self):

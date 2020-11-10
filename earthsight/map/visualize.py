@@ -55,7 +55,6 @@ class Visualize:
         preset = self.band_presets.value
         layer = self.layers.get_selected()
 
-        # TODO: pulls from SELECTED layer
         band_names, band_los, band_his = layer.img_src.get_band_presets()[preset]
 
         if len(band_names) == 1:
@@ -92,9 +91,7 @@ class Visualize:
         layer = self.layers.get_selected()
 
         band_names = self._get_current_bands()
-        viz_params = self._get_viz_params(band_names)
-        
-        layer.img_src.update_viz(viz_params)
+        layer.img_src.update_viz(band_names)
         layer.update()
 
 
@@ -114,25 +111,6 @@ class Visualize:
             band_names.append(band_name)
 
         return band_names
-
-
-    def _get_viz_params(self, band_names):
-        band_los = list()
-        band_his = list()
-        layer = self.layers.get_selected()
-
-        for band_name in band_names:
-            band = layer.img_src.bands.get(band_name)
-            lo, hi = band.get_range()
-
-            band_los.append(lo)
-            band_his.append(hi)
-
-        viz_params = {'min': band_los,
-                      'max': band_his,
-                      'bands': band_names}
-
-        return viz_params
 
 
     # ------------- #

@@ -70,7 +70,7 @@ class Imagery:
         )
 
         layer.img_src.update_ic()
-        self.update_layer()
+
 
     # ------------- #
     # -- WIDGETS -- #

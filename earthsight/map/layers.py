@@ -24,10 +24,10 @@ class Layers:
 
         self.ctr = 0
 
-        # throw on a default layer
         self.add(DEFAULT_LAYER_NAME, DEFAULT_IMG_SRC)
 
         self._build_layer_button()
+        self._build_top_pane()
         self._build_layer_window()
 
         self._add_controls()
@@ -84,13 +84,6 @@ class Layers:
 
         self.map.add_control(lbc)
 
-        lwc = ipyl.WidgetControl(
-            widget=self.layer_window,
-            position='bottomright'
-        )
-
-        self.map.add_control(lwc)
-
 
     # ------------------ #
     # -- INTERACTIONS -- #
@@ -98,36 +91,53 @@ class Layers:
     def _interact_layer_button(self, b):
         if self.layer_button.button_style == 'info':
             self.layer_button.button_style = 'success'
-            self.layer_window.layout.display = ''
+
+            self.layer_control = ipyl.WidgetControl(
+                widget=self.layer_window,
+                position='bottomright'
+            )
+            self.map.add_control(self.layer_control)
         else:
             self.layer_button.button_style = 'info'
-            self.layer_window.layout.display = 'none'
+            self.map.remove_control(self.layer_control)
+
 
 
     def _interact_layer_add(self, b):
         name = 'layer {}'.format(self.ctr)
-        self.layers.add(name, Sentinel2())
-        
-        single_layer = self._build_single_layer()
-        self.single_layers.append(single_layer)
+        self.add(name, Sentinel2())
 
-        selection_option = str(self.ctr)
-        self.selection_options.append(selection_option)
-        self.selection_pane.value = selection_option
+        self.map.remove_control(self.layer_control)
+        self._build_layer_window()
+        self.layer_control = ipyl.WidgetControl(
+            widget=self.layer_window,
+            position='bottomright'
+        )
+        self.map.add_control(self.layer_control)
 
 
     def _interact_layer_remove(self, b):
-        layer = self.layers.get_selected()
-        self.layers.remove(layer)
+        self.remove(self.get_selected())
+
+        self.map.remove_control(self.layer_control)
+        self._build_layer_window()
+        self.layer_control = ipyl.WidgetControl(
+            widget=self.layer_window,
+            position='bottomright'
+        )
+        self.map.add_control(self.layer_control)
 
     
     def _interact_basemap(self, change):
+        old_basemap = self.map.layers[0]
         basemap_eval = BASEMAPS[self.basemap_selector.value]
-        self.map.basemap = eval('ipyl.basemaps.{}'.format(basemap_eval))
+        basemap = eval('ipyl.basemaps.{}'.format(basemap_eval))
+        self.map.add_layer(basemap)
+        self.map.remove_layer(old_basemap)
 
 
     def _interact_layer_active(self, change):
-        for layer, single_layer in zip(self.layers. self.single_layers):
+        for layer, single_layer in zip(self.layers, self.single_layers):
             active = single_layer.children[1].value
             layer.active = active
             if active:
@@ -162,10 +172,10 @@ class Layers:
         self.layer_button = layer_button
 
 
-    def _build_layer_window(self):
+    def _build_top_pane(self):
         basemaps = BASEMAPS.keys()
         layout = ipyw.Layout(width='auto', height='auto')
-        basemap_selector = ipyw.Dropdown(
+        self.basemap_selector = ipyw.Dropdown(
             options=basemaps,
             value=list(basemaps)[0],
             description='basemap',
@@ -173,9 +183,9 @@ class Layers:
             continuous_update=False
         )
 
-        basemap_selector.observe(self._interact_basemap, names='value')
+        self.basemap_selector.observe(self._interact_basemap, names='value')
 
-        layer_add = ipyw.Button(
+        self.layer_add = ipyw.Button(
             description='',
             icon='plus',
             button_style='success',
@@ -183,9 +193,9 @@ class Layers:
             layout=layout
         )
 
-        layer_add.on_click(self._interact_layer_add)
+        self.layer_add.on_click(self._interact_layer_add)
 
-        layer_remove = ipyw.Button(
+        self.layer_remove = ipyw.Button(
             description='',
             icon='minus',
             button_style='danger',
@@ -193,56 +203,48 @@ class Layers:
             layout=layout
         )
 
-        layer_remove.on_click(self._interact_layer_remove)
+        self.layer_remove.on_click(self._interact_layer_remove)
 
-        top_pane = ipyw.HBox([basemap_selector, layer_add, layer_remove])
-            
-        single_layers = list()
-        for layer in self.layers:
-            single_layer = self._build_single_layer(layer.name)
-            single_layers.append(single_layer)
-
-        selection_options = list()
-        for layer in self.layers:
-            selection_options.append(layer.ctr)
-
-        selection_pane = ipyw.RadioButtons(
-            options=selection_options,
-            value=selection_options[0],
-            description='select',
-            layout=layout
-        )
-
-        selection_pane.observe(self._interact_selection_pane)
-        
-        layer_pane = ipyw.HBox(
+        self.top_pane = ipyw.HBox(
             [
-                selection_pane, 
-                ipyw.VBox(single_layers)
+                self.basemap_selector, 
+                self.layer_add, 
+                self.layer_remove
             ]
         )
 
-        layer_window = ipyw.VBox([top_pane, layer_pane])
 
-        self.basemap_selector = basemap_selector
-        self.layer_add = layer_add
-        self.layer_remove = layer_remove
-        self.top_pane = top_pane
-        self.single_layers = single_layers
-        self.selection_options = selection_options
-        self.selection_pane = selection_pane
-        self.layer_pane = layer_pane
-        self.layer_window = layer_window
+    def _build_layer_window(self):
+        self.single_layers = list()
+        for layer in self.layers:
+            self._build_single_layer(layer.name)
+        self.combined_layers = ipyw.VBox(self.single_layers)
 
-        # don't show until button is pressed
-        self.layer_window.layout.display = 'none'
-    
-    
-    def _build_single_layer(self, name=None):
-        layout = ipyw.Layout(width='auto', height='auto')
+        self.selection_options = list()
+        for layer in self.layers:
+            self.selection_options.append(layer.ctr)
+
+        self.selection_pane = ipyw.RadioButtons(
+            options=self.selection_options,
+            value=self.selection_options[-1],
+            description='select',
+            layout=self.combined_layers.layout,
+        )
+
+        self.selection_pane.observe(self._interact_selection_pane)
         
-        if name is None:
-            name = 'New Layer {}'.format(self.layer_ctr)
+        self.layer_pane = ipyw.HBox(
+            [
+                self.selection_pane, 
+                self.combined_layers
+            ]
+        )
+
+        self.layer_window = ipyw.VBox([self.top_pane, self.layer_pane])
+
+    
+    def _build_single_layer(self, name):
+        layout = ipyw.Layout(width='auto', height='auto')
         
         layer_text = ipyw.Text(
             value=name,
@@ -253,21 +255,21 @@ class Layers:
 
         layer_active = ipyw.Checkbox(
             value=True,
-            description='',
-            indent=False,
+            description='active',
             layout=layout,
+            indent=False
         )
 
         layer_active.observe(self._interact_layer_active, names='value')
 
         single_layer = ipyw.HBox(
             [
-                layer_active,
-                layer_text
+                layer_text,
+                layer_active
             ]
         )
 
-        return single_layer
+        self.single_layers.append(single_layer)
         
 
 class Layer:
@@ -282,6 +284,8 @@ class Layer:
         
         self.map_layer = None
 
+        self.create()
+
 
     def get_url(self):
         url = self.img_src.get_url()
@@ -295,8 +299,9 @@ class Layer:
 
 
     def destroy(self):
-        self.map.remove_layer(self.map_layer)
-        self.map_layer = None
+        if self.map_layer is not None:
+            self.map.remove_layer(self.map_layer)
+            self.map_layer = None
 
 
     def update(self):
