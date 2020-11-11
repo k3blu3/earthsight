@@ -94,13 +94,16 @@ class Sentinel2:
 
         self.ic = None
         self.img = None
+        self.active_bands = list()
         self.viz_params = None
 
         # initialize image collection
         self.update_ic()
 
-        # initialize visualization
-        self.update_viz(['B4', 'B3', 'B2'])
+        # initialize visualization with true color preset
+        band_names, band_los, band_his = self.band_presets['true color']
+        self.set_active_bands(band_names, band_los, band_his)
+        self.update_viz()
 
 
     def _build_ic(self):
@@ -177,9 +180,9 @@ class Sentinel2:
         return img.updateMask(edge_mask)
 
 
-    def compute_hist(self, bounds, band_names, scale):
+    def compute_hist(self, bounds, scale):
         roi = bounds_to_geom(bounds)
-        hist_img = self.img.select(band_names)
+        hist_img = self.img.select(self.active_bands)
         hist = hist_img.reduceRegion(
             reducer=ee.Reducer.histogram(),
             geometry=roi,
@@ -191,7 +194,7 @@ class Sentinel2:
         hist_bands = hist.keys().getInfo()
         hist_list = hist.values().getInfo()
         hist_dict = dict()
-        for band_name in band_names:
+        for band_name in self.active_bands:
             band_idx = hist_bands.index(band_name)
             hist_dict[band_name] = (
                 hist_list[band_idx]['bucketMeans'],
@@ -209,25 +212,32 @@ class Sentinel2:
         self._ic_to_image()
 
 
-    def update_viz(self, band_names):
-        self.viz_params = self.get_viz_params(band_names)
+    def set_active_bands(self, band_names, band_los, band_his):
+        self.active_bands = band_names
+        for idx, (band_name, band_lo, band_hi) in enumerate(zip(band_names, band_los, band_his)):
+            self.bands.get(band_name).set_range(band_lo, band_hi)
+            
+
+    def update_viz(self):
+        self.viz_params = self.get_viz_params()
 
 
-    def get_viz_params(self, band_names):
+    def get_viz_params(self):
         band_los = list()
         band_his = list()
 
-        for band_name in band_names:
+        for band_name in self.active_bands:
             band = self.bands.get(band_name)
+            
             lo, hi = band.get_range()
-
+            
             band_los.append(lo)
             band_his.append(hi)
 
         viz_params = {
             'min': band_los,
             'max': band_his,
-            'bands': band_names
+            'bands': self.active_bands
         }
 
         return viz_params

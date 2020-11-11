@@ -64,10 +64,9 @@ class Visualize:
 
         for idx, (band_name, band_lo, band_hi) in enumerate(zip(band_names, band_los, band_his)):
             band = layer.img_src.bands.get(band_name)
-            band.set_range(band_lo, band_hi)
 
-            self.band_selectors[idx].value = band.get_name()
-            self.band_sliders[idx].value = band.get_range()
+            self.band_selectors[idx].value = band_name
+            self.band_sliders[idx].value = (band_lo, band_hi)
             self.band_sliders[idx].min = band.get_min()
             self.band_sliders[idx].max = band.get_max()
 
@@ -84,33 +83,57 @@ class Visualize:
             self.band_panes[1].layout.display = ''
             self.band_panes[2].layout.display = ''
 
-        self.interact_band_change(None)
+        self._interact_select_change(None)
 
 
-    def _interact_band_change(self, change):
+    def _interact_select_change(self, change):
         layer = self.layers.get_selected()
 
-        band_names = self._get_current_bands()
-        layer.img_src.update_viz(band_names)
-        layer.update()
-
-
-    def _get_current_bands(self):
         band_names = list()
-        layer = self.layers.get_selected()
+        band_los = list()
+        band_his = list()
 
         for band_selector, band_slider in zip(self.band_selectors, self.band_sliders):
             band_name = band_selector.value
-            
+
             band = layer.img_src.bands.get(band_name)
-            band.set_range(band_slider.value[0], band_slider.value[1])
+            band_slider.value = band.get_range()
+            band_slider.min = band.get_min()
+            band_slider.max = band.get_max()
+            
+            band_lo, band_hi = band_slider.value
+
+            band_names.append(band_name)
+            band_los.append(band_lo)
+            band_his.append(band_hi)
 
             if self.single_band.value == True:
                 break
 
-            band_names.append(band_name)
+        layer.img_src.set_active_bands(band_names, band_los, band_his)
+        layer.update()
 
-        return band_names
+
+    def _interact_slider_change(self, change):
+        layer = self.layers.get_selected()
+
+        band_names = list()
+        band_los = list()
+        band_his = list()
+
+        for band_selector, band_slider in zip(self.band_selectors, self.band_sliders):
+            band_name = band_selector.value
+            band_lo, band_hi = band_slider.value
+
+            band_names.append(band_name)
+            band_los.append(band_lo)
+            band_his.append(band_hi)
+
+            if self.single_band.value == True:
+                break
+
+        layer.img_src.set_active_bands(band_names, band_los, band_his)
+        layer.update()
 
 
     # ------------- #
@@ -191,8 +214,8 @@ class Visualize:
             band_panes.append(band_pane)
 
         for band_selector, band_slider in zip(band_selectors, band_sliders):
-            band_selector.observe(self._interact_band_change, names='value')
-            band_slider.observe(self._interact_band_change, names='value')
+            band_selector.observe(self._interact_select_change, names='value')
+            band_slider.observe(self._interact_slider_change, names='value')
 
         viz_pane = ipyw.VBox(
             [

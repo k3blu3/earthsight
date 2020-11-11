@@ -41,7 +41,7 @@ class EarthMap:
         self.visualize = Visualize(self.map, self.layers)
 
         # control histogram options
-        self.histogram = Histogram(self.map, self.layers)
+        self.histogram = Histogram(self.map, self.layers, self.visualize.band_sliders)
 
 
     def create_map(self, basemap, center, zoom):

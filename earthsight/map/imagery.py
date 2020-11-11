@@ -63,13 +63,13 @@ class Imagery:
 
         layer.img_src.img_params.set(
             start_datetime,
-            end_dtetime,
+            end_datetime,
             cloudy_pixel_pct,
             cloud_mask,
             temporal_op
         )
 
-        layer.img_src.update_ic()
+        layer.update()
 
 
     # ------------- #

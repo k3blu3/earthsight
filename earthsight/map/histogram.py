@@ -5,14 +5,18 @@ Histogram class definition that builds all widgets for Histogram pane
 '''
 
 
+import bqplot as bq
 import ipywidgets as ipyw
 import ipyleaflet as ipyl
 
+from earthsight.utils.constants import ZOOM_TO_SCALE
+
 
 class Histogram:
-    def __init__(self, m, layers):
+    def __init__(self, m, layers, band_sliders):
         self.map = m
         self.layers = layers
+        self.band_sliders = band_sliders
 
         self._build_hist_button()
 
@@ -42,7 +46,7 @@ class Histogram:
 
             # add hist pane control directly to map
             # TODO: this is kind of ugly
-            self.controls.hist_control = ipyl.WidgetControl(
+            self.hist_control = ipyl.WidgetControl(
                 widget=self.hist_pane,
                 position='topleft'
             )
@@ -52,7 +56,7 @@ class Histogram:
         else:
             self.hist_button.button_style = 'info'
             [l.unlink() for l in self.hist_links]
-            self.map.remove_control(self.controls.hist_control)
+            self.map.remove_control(self.hist_control)
 
 
     def _get_hist_figure(self, x, y, color, bidx):
@@ -122,13 +126,12 @@ class Histogram:
         layer = self.layers.get_selected()
 
         bounds = self.map.bounds
-        # TODO:
-        band_names = self.get_current_bands()
         scale = ZOOM_TO_SCALE[self.map.zoom]
     
-        hist = layer.img_src.compute_hist(bounds, band_names, scale)
+        hist = layer.img_src.compute_hist(bounds, scale)
 
-        if self.single_band.value == True:
+        band_names = layer.img_src.active_bands
+        if len(band_names) == 1:
             colors = ['black']
         else:
             colors = ['red', 'green', 'blue']
@@ -139,7 +142,7 @@ class Histogram:
             hist_data = hist[band]
             color = colors[bidx]
 
-            hist_fig = self.get_hist_figure(hist_data[0], hist_data[1], color, bidx)
+            hist_fig = self._get_hist_figure(hist_data[0], hist_data[1], color, bidx)
             hist_link = ipyw.jslink(
                 (
                     self.band_sliders[bidx],

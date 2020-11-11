@@ -115,6 +115,8 @@ class Layers:
         )
         self.map.add_control(self.layer_control)
 
+        self._interact_selection_pane(None)
+
 
     def _interact_layer_remove(self, b):
         self.remove(self.get_selected())
@@ -126,6 +128,8 @@ class Layers:
             position='bottomright'
         )
         self.map.add_control(self.layer_control)
+
+        self._interact_selection_pane(None)
 
     
     def _interact_basemap(self, change):
@@ -305,4 +309,6 @@ class Layer:
 
 
     def update(self):
+        self.img_src.update_ic()
+        self.img_src.update_viz()
         self.map_layer.url = self.get_url()
