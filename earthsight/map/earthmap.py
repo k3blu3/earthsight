@@ -10,7 +10,11 @@ import datetime
 import ipyleaflet as ipyl
 
 
-from earthsight.map.earthwidgets import EarthWidgets
+from earthsight.map.basemaps import BASEMAPS
+from earthsight.map.histogram import Histogram
+from earthsight.map.imagery import Imagery
+from earthsight.map.layers import Layers
+from earthsight.map.visualize import Visualize
 from earthsight.utils.constants import (BASEMAP_DEFAULT,
                                         CENTER_DEFAULT,
                                         ZOOM_DEFAULT)
@@ -26,10 +30,18 @@ class EarthMap:
 
         # add basic interactive controls
         self.add_base_controls()
-        
-        # add custom widgets
-        self.widgets = EarthWidgets(self.map)
-        self.add_custom_widgets()
+
+        # control layers 
+        self.layers = Layers(self.map)
+
+        # control imagery options
+        self.imagery = Imagery(self.map, self.layers)
+
+        # control visualize options
+        self.visualize = Visualize(self.map, self.layers)
+
+        # control histogram options
+        self.histogram = Histogram(self.map, self.layers, self.visualize.band_sliders)
 
 
     def create_map(self, basemap, center, zoom):
@@ -76,54 +88,6 @@ class EarthMap:
             }
         }
         self.map.add_control(dc)
-
-
-    def add_custom_widgets(self):
-        # add img button and corresponding pane to the map
-        self.widgets.build_img_button()
-        self.widgets.build_img_pane()
-
-        self.map.add_control(
-            ipyl.WidgetControl(
-                widget=self.widgets.img_button,
-                position='topleft'
-            )
-        )
-
-        self.map.add_control(
-            ipyl.WidgetControl(
-                widget=self.widgets.img_pane,
-                position='topleft'
-            )
-        )
-
-        # add viz button and corresponding pane to the map
-        self.widgets.build_viz_button()
-        self.widgets.build_viz_pane()
-
-        self.map.add_control(
-            ipyl.WidgetControl(
-                widget=self.widgets.viz_button,
-                position='topleft'
-            )
-        )
-
-        self.map.add_control(
-            ipyl.WidgetControl(
-                widget=self.widgets.viz_pane,
-                position='topleft'
-            )
-        )
-
-        # add histogram button and correpsonding pane to the map
-        self.widgets.build_hist_button()
-
-        self.map.add_control(
-            ipyl.WidgetControl(
-                widget=self.widgets.hist_button,
-                position='topleft'
-            )
-        )
 
 
     def show(self):
