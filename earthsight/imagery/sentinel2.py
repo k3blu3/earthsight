@@ -73,8 +73,8 @@ for key in S2_BAND_DEFS.keys():
 
 S2_IMG_PARAMS = ImgParams()
 S2_IMG_PARAMS.set(
-    start_datetime='2019-07-01',
-    end_datetime='2019-10-01',
+    start_datetime='2020-08-01',
+    end_datetime='2020-11-01',
     cloudy_pixel_pct=100,
     cloud_mask=False,
     temporal_op='mean'

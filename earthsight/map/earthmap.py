@@ -8,6 +8,7 @@ EarthMap class definition that builds a custom ipyleaflet map
 import bqplot as bq
 import datetime
 import ipyleaflet as ipyl
+import ipywidgets as ipyw
 
 
 from earthsight.map.basemaps import BASEMAPS
@@ -57,7 +58,7 @@ class EarthMap:
         m = ipyl.Map(basemap=basemap, **map_kwargs)
         
         # set layout height
-        m.layout.height = '700px'
+        m.layout = ipyw.Layout(height='1000px')
         
         return m
 
