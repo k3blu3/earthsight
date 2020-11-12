@@ -29,6 +29,7 @@ class Layers:
         self._build_layer_button()
         self._build_top_pane()
         self._build_layer_window()
+        self._update_selected()
 
         self._add_controls()
 
@@ -115,7 +116,7 @@ class Layers:
         )
         self.map.add_control(self.layer_control)
 
-        self._interact_selection_pane(None)
+        self._update_selected()
 
 
     def _interact_layer_remove(self, b):
@@ -129,7 +130,7 @@ class Layers:
         )
         self.map.add_control(self.layer_control)
 
-        self._interact_selection_pane(None)
+        self._update_selected()
 
     
     def _interact_basemap(self, change):
@@ -139,23 +140,44 @@ class Layers:
         self.map.add_layer(basemap)
         self.map.remove_layer(old_basemap)
 
+    
+    def _interact_layer_text(self, change):
+        for layer, single_layer in zip(self.layers, self.single_layers):
+            layer.name = single_layer.children[0].value
+
 
     def _interact_layer_active(self, change):
         for layer, single_layer in zip(self.layers, self.single_layers):
             active = single_layer.children[1].value
             layer.active = active
             if active:
+                single_layer.children[1].button_style = 'info'
                 layer.create()
             else:
+                single_layer.children[1].button_style = ''
                 layer.destroy()
 
 
-    def _interact_selection_pane(self, change):
-        for layer in self.layers:
-            if layer.ctr == int(self.selection_pane.value):
+    def _update_selected(self):
+        layer_idx = len(self.layers) - 1
+        for idx, (layer, single_layer) in enumerate(zip(self.layers, self.single_layers)):
+            if idx == layer_idx:
                 layer.selected = True
+                single_layer.children[2].button_style = 'info'
             else:
                 layer.selected = False
+                single_layer.children[2].button_style = ''
+
+
+    def _interact_layer_selected(self, b):
+        layer_idx = int(b.tooltip) - 1
+        for layer, single_layer in zip(self.layers, self.single_layers):
+            if layer.ctr == layer_idx:
+                layer.selected = True
+                single_layer.children[2].button_style = 'info'
+            else:
+                layer.selected = False
+                single_layer.children[2].button_style = ''
 
 
     # ------------- #
@@ -183,7 +205,6 @@ class Layers:
             options=basemaps,
             value=list(basemaps)[0],
             description='basemap',
-            layout=layout,
             continuous_update=False
         )
 
@@ -221,55 +242,47 @@ class Layers:
     def _build_layer_window(self):
         self.single_layers = list()
         for layer in self.layers:
-            self._build_single_layer(layer.name)
-        self.combined_layers = ipyw.VBox(self.single_layers)
-
-        self.selection_options = list()
-        for layer in self.layers:
-            self.selection_options.append(layer.ctr)
-
-        self.selection_pane = ipyw.RadioButtons(
-            options=self.selection_options,
-            value=self.selection_options[-1],
-            description='select',
-            layout=self.combined_layers.layout,
-        )
-
-        self.selection_pane.observe(self._interact_selection_pane)
-        
-        self.layer_pane = ipyw.HBox(
-            [
-                self.selection_pane, 
-                self.combined_layers
-            ]
-        )
+            self._build_single_layer(layer)
+        self.layer_pane = ipyw.VBox(self.single_layers)
 
         self.layer_window = ipyw.VBox([self.top_pane, self.layer_pane])
 
     
-    def _build_single_layer(self, name):
+    def _build_single_layer(self, layer):
         layout = ipyw.Layout(width='auto', height='auto')
         
         layer_text = ipyw.Text(
-            value=name,
+            value=layer.name,
             placeholder='type something',
             description='name',
-            layout=layout
         )
 
-        layer_active = ipyw.Checkbox(
+        layer_active = ipyw.ToggleButton(
             value=True,
-            description='active',
+            description='',
             layout=layout,
-            indent=False
+            button_style='info',
+            tooltip='display layer on map',
+            icon='eye'
         )
 
+        layer_selected = ipyw.Button(
+            description='',
+            tooltip=str(layer.ctr + 1),
+            button_style='',
+            layout=layout,
+            icon='check'
+        )
+
+        layer_text.observe(self._interact_layer_text, names='value')
         layer_active.observe(self._interact_layer_active, names='value')
+        layer_selected.on_click(self._interact_layer_selected)
 
         single_layer = ipyw.HBox(
             [
                 layer_text,
-                layer_active
+                layer_active,
+                layer_selected
             ]
         )
 
