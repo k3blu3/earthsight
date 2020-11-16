@@ -14,12 +14,14 @@ from earthsight.utils.constants import ZOOM_TO_SCALE
 
 class Histogram:
     def __init__(self, m, layers, band_sliders):
+        '''
+        container for histogram pane on map
+        '''
         self.map = m
         self.layers = layers
         self.band_sliders = band_sliders
 
         self._build_hist_button()
-
         self._add_controls()
 
 
@@ -39,6 +41,9 @@ class Histogram:
     # -- INTERACTIONS -- #
     # ------------------ #
     def _interact_hist_button(self, b):
+        '''
+        compute a histogram and show result when pressed
+        '''
         if self.hist_button.button_style == 'info':
             self.hist_button.button_style = 'warning'
 
@@ -60,6 +65,9 @@ class Histogram:
 
 
     def _get_hist_figure(self, x, y, color, bidx):
+        '''
+        get a bqplot histogram figure with data and interactive sliders
+        '''
         x_scale = bq.LinearScale()
         y_scale = bq.LinearScale()
 
@@ -108,6 +116,9 @@ class Histogram:
     # -- WIDGETS -- #
     # ------------- #
     def _build_hist_button(self):
+        '''
+        build histogram button which computes a histogram of selected bands
+        '''
         button_layout = ipyw.Layout(width='auto', height='auto')
         hist_button = ipyw.Button(
             description='',
@@ -123,6 +134,9 @@ class Histogram:
 
 
     def _build_hist_pane(self):
+        '''
+        build histogram pane which contains interactive histogram figures
+        '''
         layer = self.layers.get_selected()
 
         bounds = self.map.bounds
@@ -143,6 +157,7 @@ class Histogram:
             color = colors[bidx]
 
             hist_fig = self._get_hist_figure(hist_data[0], hist_data[1], color, bidx)
+            # TODO: these links are buggy
             hist_link = ipyw.jslink(
                 (
                     self.band_sliders[bidx],

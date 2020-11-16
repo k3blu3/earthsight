@@ -10,6 +10,9 @@ from shapely.geometry import box, mapping
 
 
 def image_to_tiles(image, vis_params=None):
+    '''
+    get a tile layer URL from an Image
+    '''
     map_id = image.getMapId(vis_params)
     return map_id['tile_fetcher'].url_format
 

@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='earthsight',
-    version='0.0.4',
+    version='0.0.5',
     description='a tool to explore, analyze and understand earth observation data',
     url='https://github.com/k3blu3/earthsight',
     author='Krishna Karra',

@@ -26,6 +26,9 @@ class EarthMap:
                  basemap=BASEMAP_DEFAULT,
                  center=CENTER_DEFAULT,
                  zoom=ZOOM_DEFAULT):
+        '''
+        build ipyleaflet Map with custom widgets for interacting with imagery
+        '''
         # create leaflet map
         self.map = self.create_map(basemap, center, zoom)
 
@@ -46,6 +49,9 @@ class EarthMap:
 
 
     def create_map(self, basemap, center, zoom):
+        '''
+        create map and set some parameters
+        '''
         # define map kwargs
         map_kwargs = dict()
         map_kwargs['center'] = center
@@ -64,6 +70,9 @@ class EarthMap:
 
     
     def add_base_controls(self):
+        '''
+        add some basic interactive map controls
+        '''
         zc = ipyl.ZoomControl(position='topright')
         self.map.add_control(zc)
 
@@ -92,6 +101,9 @@ class EarthMap:
 
 
     def show(self):
+        '''
+        show the map in a jupyter notebook
+        '''
         return self.map
 
 
