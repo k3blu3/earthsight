@@ -7,6 +7,9 @@ Class definition for ImgParams, which provides a common interface for setting im
 
 class ImgParams:
     def __init__(self):
+        '''
+        container that represents common imagery parameters
+        '''
         self.start_datetime = None
         self.end_datetime = None
         self.cloudy_pixel_pct = None
@@ -15,6 +18,9 @@ class ImgParams:
 
 
     def set(self, start_datetime, end_datetime, cloudy_pixel_pct, cloud_mask, temporal_op):
+        '''
+        set image parameters that define how an image is constructed
+        '''
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
         self.cloudy_pixel_pct = cloudy_pixel_pct
@@ -22,6 +28,8 @@ class ImgParams:
         self.temporal_op = temporal_op
 
 
+    # ------------- #
+    # -- GETTERS -- #
     def get_start_datetime(self):
         return self.start_datetime
 

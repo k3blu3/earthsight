@@ -11,6 +11,9 @@ import ipywidgets as ipyw
 
 class Visualize:
     def __init__(self, m, layers):
+        '''
+        container for visualize pane on map
+        '''
         self.map = m
         self.layers = layers
         
@@ -43,6 +46,9 @@ class Visualize:
     # -- INTERACTIONS -- #
     # ------------------ #
     def _interact_viz_button(self, b):
+        '''
+        toggle viz pane
+        '''
         if self.viz_button.button_style == 'info':
             self.viz_button.button_style = 'success'
             self.viz_pane.layout.display = ''
@@ -52,6 +58,9 @@ class Visualize:
 
 
     def _interact_band_presets(self, change):
+        '''
+        update bands for selected layer when a preset is chosen
+        '''
         preset = self.band_presets.value
         layer = self.layers.get_selected()
 
@@ -72,6 +81,9 @@ class Visualize:
 
 
     def _interact_single_band(self, change):
+        '''
+        only show a single band to modify when checked
+        '''
         if self.single_band.value == True:
             self.band_panes[0].layout.display = ''
             self.band_selectors[0].description = 'gray'
@@ -87,6 +99,9 @@ class Visualize:
 
 
     def _interact_select_change(self, change):
+        '''
+        when a new band is chosen, update the sliders and set active bands
+        '''
         layer = self.layers.get_selected()
 
         band_names = list()
@@ -115,6 +130,9 @@ class Visualize:
 
 
     def _interact_slider_change(self, change):
+        '''
+        when a band slider is changed, update the band range values and visualization
+        '''
         layer = self.layers.get_selected()
 
         band_names = list()
@@ -140,6 +158,9 @@ class Visualize:
     # -- WIDGETS -- #
     # ------------- #
     def _build_viz_button(self):
+        '''
+        build viz button which toggles the viz pane
+        '''
         button_layout = ipyw.Layout(width='auto', height='auto')
         viz_button = ipyw.Button(
             description='',
@@ -155,6 +176,9 @@ class Visualize:
 
 
     def _build_viz_pane(self):
+        '''
+        build viz pane which contains selection options to change the map visualization
+        '''
         layer = self.layers.get_selected()
 
         band_preset_options = layer.img_src.get_band_presets().keys()

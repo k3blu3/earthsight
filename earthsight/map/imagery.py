@@ -12,6 +12,9 @@ import ipyleaflet as ipyl
 
 class Imagery:
     def __init__(self, m, layers):
+        '''
+        container for imagery pane on map
+        '''
         self.map = m
         self.layers = layers
 
@@ -44,6 +47,9 @@ class Imagery:
     # -- INTERACTIONS -- #
     # ------------------ #
     def _interact_img_button(self, b):
+        '''
+        toggle imagery pane
+        '''
         if self.img_button.button_style == 'info':
             self.img_button.button_style= 'success'
             self.img_pane.layout.display = ''
@@ -53,6 +59,9 @@ class Imagery:
 
 
     def _interact_img_pane(self, change):
+        '''
+        update selected layer with imagery parameters when something changes
+        '''
         layer = self.layers.get_selected()
 
         start_datetime = self.date_start.value.strftime('%Y-%m-%d')
@@ -76,6 +85,9 @@ class Imagery:
     # -- WIDGETS -- #
     # ------------- #
     def _build_img_button(self):
+        '''
+        build image button to display image pane
+        '''
         button_layout = ipyw.Layout(width='auto', height='auto')
         img_button = ipyw.Button(
             description='',
@@ -91,6 +103,9 @@ class Imagery:
 
 
     def _build_img_pane(self):
+        '''
+        build image pane containing all imagery selectors
+        '''
         layer = self.layers.get_selected()
 
         # pick start date
