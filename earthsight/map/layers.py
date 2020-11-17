@@ -111,7 +111,7 @@ class Layers:
         '''
         toggle layers pane
         '''
-        if self.layer_button.button_style == 'info':
+        if self.layer_button.button_style == '':
             self.layer_button.button_style = 'success'
 
             self.layer_control = ipyl.WidgetControl(
@@ -120,7 +120,7 @@ class Layers:
             )
             self.map.add_control(self.layer_control)
         else:
-            self.layer_button.button_style = 'info'
+            self.layer_button.button_style = ''
             self.map.remove_control(self.layer_control)
 
 
@@ -229,11 +229,11 @@ class Layers:
         '''
         build layer button which toggles the layer pane
         '''
-        layout = ipyw.Layout(width='auto', height='auto')
+        layout = ipyw.Layout(width='35px', height='35px')
         layer_button = ipyw.Button(
             description='',
-            icon='layer-group',
-            button_style='info',
+            icon='clone',
+            button_style='',
             tooltip='select, add and remove map layers',
             layout=layout
         )
@@ -248,7 +248,7 @@ class Layers:
         build top portion of layer pane which contains basemap and add/remove selectors
         '''
         basemaps = BASEMAPS.keys()
-        layout = ipyw.Layout(width='auto', height='auto')
+        layout = ipyw.Layout(width='35px', height='35px')
         self.basemap_selector = ipyw.Dropdown(
             options=basemaps,
             value=list(basemaps)[0],
@@ -303,7 +303,7 @@ class Layers:
         '''
         build a single layer, which consists of layer text and active/selected buttons
         '''
-        layout = ipyw.Layout(width='auto', height='auto')
+        layout = ipyw.Layout(width='40px', height='35px')
         
         layer_text = ipyw.Text(
             value=layer.name,
@@ -321,6 +321,7 @@ class Layers:
         )
 
         # TODO: this is hacky. layer counter is encoded in the tooltip
+        layout = ipyw.Layout(width='35px', height='35px')
         layer_selected = ipyw.Button(
             description='',
             tooltip=str(layer.ctr + 1),

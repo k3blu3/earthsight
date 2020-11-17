@@ -44,7 +44,7 @@ class Histogram:
         '''
         compute a histogram and show result when pressed
         '''
-        if self.hist_button.button_style == 'info':
+        if self.hist_button.button_style == '':
             self.hist_button.button_style = 'warning'
 
             self._build_hist_pane()
@@ -59,7 +59,7 @@ class Histogram:
 
             self.hist_button.button_style = 'success'
         else:
-            self.hist_button.button_style = 'info'
+            self.hist_button.button_style = ''
             [l.unlink() for l in self.hist_links]
             self.map.remove_control(self.hist_control)
 
@@ -119,11 +119,11 @@ class Histogram:
         '''
         build histogram button which computes a histogram of selected bands
         '''
-        button_layout = ipyw.Layout(width='auto', height='auto')
+        button_layout = ipyw.Layout(width='35px', height='35px')
         hist_button = ipyw.Button(
             description='',
-            icon='chart-bar',
-            button_style='info',
+            icon='calculator',
+            button_style='',
             tooltip='Compute histogram across selected bands',
             layout=button_layout
         )

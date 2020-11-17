@@ -64,7 +64,7 @@ class EarthMap:
         m = ipyl.Map(basemap=basemap, **map_kwargs)
         
         # set layout height
-        m.layout = ipyw.Layout(height='1000px')
+        m.layout = ipyw.Layout(height='800px')
         
         return m
 
