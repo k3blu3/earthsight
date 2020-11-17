@@ -49,11 +49,11 @@ class Visualize:
         '''
         toggle viz pane
         '''
-        if self.viz_button.button_style == 'info':
+        if self.viz_button.button_style == '':
             self.viz_button.button_style = 'success'
             self.viz_pane.layout.display = ''
         else:
-            self.viz_button.button_style = 'info'
+            self.viz_button.button_style = ''
             self.viz_pane.layout.display = 'none'
 
 
@@ -161,11 +161,11 @@ class Visualize:
         '''
         build viz button which toggles the viz pane
         '''
-        button_layout = ipyw.Layout(width='auto', height='auto')
+        button_layout = ipyw.Layout(width='35px', height='35px')
         viz_button = ipyw.Button(
             description='',
-            icon='eye',
-            button_style='info',
+            icon='adjust',
+            button_style='',
             tooltip='Configure visualization options',
             layout=button_layout
         )

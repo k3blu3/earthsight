@@ -50,11 +50,11 @@ class Imagery:
         '''
         toggle imagery pane
         '''
-        if self.img_button.button_style == 'info':
+        if self.img_button.button_style == '':
             self.img_button.button_style= 'success'
             self.img_pane.layout.display = ''
         else:
-            self.img_button.button_style = 'info'
+            self.img_button.button_style = ''
             self.img_pane.layout.display = 'none'
 
 
@@ -88,11 +88,11 @@ class Imagery:
         '''
         build image button to display image pane
         '''
-        button_layout = ipyw.Layout(width='auto', height='auto')
+        button_layout = ipyw.Layout(width='35px', height='35px')
         img_button = ipyw.Button(
             description='',
             icon='globe',
-            button_style='info',
+            button_style='',
             tooltip='Configure imagery options',
             layout=button_layout
         )
